@@ -7,15 +7,16 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 export async function POST(req: NextRequest) {
   const { password } = await req.json();
 
-  const chatPassword = await convex.query(api.settings.get, { key: "chatPassword" });
+  const record = await convex.query(api.accessPasswords.getByPassword, { password });
 
-  if (!chatPassword) {
-    return NextResponse.json({ error: "Chat password not set" }, { status: 500 });
+  if (!record) {
+    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
-  if (password === chatPassword) {
-    return NextResponse.json({ success: true });
+  const today = new Date().toISOString().split("T")[0];
+  if (record.expiryDate < today) {
+    return NextResponse.json({ error: "Password has expired" }, { status: 401 });
   }
 
-  return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+  return NextResponse.json({ success: true });
 }

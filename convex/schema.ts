@@ -6,4 +6,10 @@ export default defineSchema({
     key: v.string(),
     value: v.string(),
   }).index("by_key", ["key"]),
+
+  accessPasswords: defineTable({
+    password: v.string(),
+    expiryDate: v.string(), // ISO date string "YYYY-MM-DD"
+    createdAt: v.number(),
+  }),
 });
