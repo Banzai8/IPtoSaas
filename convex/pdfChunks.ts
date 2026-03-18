@@ -26,23 +26,29 @@ export const getById = query({
   },
 });
 
+type ChunkDoc = { _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number };
+
 export const searchSimilar = action({
   args: {
     embedding: v.array(v.float64()),
     limit: v.optional(v.number()),
+    minScore: v.optional(v.number()),
   },
-  handler: async (ctx, args): Promise<Array<{ _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } | null>> => {
+  handler: async (ctx, args): Promise<ChunkDoc[]> => {
     const limit = args.limit ?? 5;
+    const minScore = args.minScore ?? 0.6; // only return genuinely relevant chunks
     const results = await ctx.vectorSearch("pdfChunks", "by_embedding", {
       vector: args.embedding,
       limit,
     });
-    const chunks: Array<{ _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } | null> = await Promise.all(
-      results.map((r): Promise<{ _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } | null> =>
+    // Filter by relevance score before fetching full documents
+    const relevant = results.filter((r) => r._score >= minScore);
+    const chunks: Array<ChunkDoc | null> = await Promise.all(
+      relevant.map((r): Promise<ChunkDoc | null> =>
         ctx.runQuery(api.pdfChunks.getById, { id: r._id })
       )
     );
-    return chunks.filter((c): c is { _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } => c !== null);
+    return chunks.filter((c): c is ChunkDoc => c !== null);
   },
 });
 
