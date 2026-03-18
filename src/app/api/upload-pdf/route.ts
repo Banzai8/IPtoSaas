@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import OpenAI from "openai";
-// Dynamic import avoids pdf-parse attempting to load test files at module init time
-const getPdfParse = () => import("pdf-parse").then((m) => m.default);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
 
 export const maxDuration = 60;
 
@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
   try {
     // Step 2: Extract text
     const buffer = Buffer.from(await file.arrayBuffer());
-    const pdfParse = await getPdfParse();
     const parsed = await pdfParse(buffer);
     const rawText = parsed.text.trim();
 
