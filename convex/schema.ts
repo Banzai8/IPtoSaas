@@ -7,6 +7,11 @@ export default defineSchema({
     value: v.string(),
   }).index("by_key", ["key"]),
 
+  knowledgeEntries: defineTable({
+    content: v.string(),
+    createdAt: v.number(),
+  }),
+
   accessPasswords: defineTable({
     password: v.string(),
     expiryDate: v.string(), // ISO date string "YYYY-MM-DD"

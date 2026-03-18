@@ -11,11 +11,13 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<"knowledge" | "passwords" | "conversations" | "pdfs">("knowledge");
 
-  // Knowledge & Rules
-  const [knowledge, setKnowledge] = useState("");
+  // Knowledge entries
+  const [newKnowledge, setNewKnowledge] = useState("");
+  const [addingKnowledge, setAddingKnowledge] = useState(false);
+  const [addedKnowledge, setAddedKnowledge] = useState(false);
+
+  // Rules
   const [rules, setRules] = useState("");
-  const [savingKnowledge, setSavingKnowledge] = useState(false);
-  const [savedKnowledge, setSavedKnowledge] = useState(false);
   const [savingRules, setSavingRules] = useState(false);
   const [savedRules, setSavedRules] = useState(false);
 
@@ -32,6 +34,9 @@ export default function AdminPage() {
 
   const settings = useQuery(api.settings.getAll);
   const setSetting = useMutation(api.settings.set);
+  const knowledgeEntries = useQuery(api.knowledgeEntries.list);
+  const addKnowledgeEntry = useMutation(api.knowledgeEntries.add);
+  const removeKnowledgeEntry = useMutation(api.knowledgeEntries.remove);
   const accessPasswords = useQuery(api.accessPasswords.list);
   const conversations = useQuery(api.conversations.list);
   const addPassword = useMutation(api.accessPasswords.add);
@@ -44,7 +49,6 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (settings) {
-      setKnowledge(settings.knowledge ?? "");
       setRules(settings.rules ?? "");
     }
   }, [settings]);
@@ -79,13 +83,15 @@ export default function AdminPage() {
     }
   }
 
-  async function handleSaveKnowledge(e: React.FormEvent) {
+  async function handleAddKnowledge(e: React.FormEvent) {
     e.preventDefault();
-    setSavingKnowledge(true);
-    await setSetting({ key: "knowledge", value: knowledge });
-    setSavingKnowledge(false);
-    setSavedKnowledge(true);
-    setTimeout(() => setSavedKnowledge(false), 3000);
+    if (!newKnowledge.trim()) return;
+    setAddingKnowledge(true);
+    await addKnowledgeEntry({ content: newKnowledge.trim() });
+    setNewKnowledge("");
+    setAddingKnowledge(false);
+    setAddedKnowledge(true);
+    setTimeout(() => setAddedKnowledge(false), 3000);
   }
 
   async function handleSaveRules(e: React.FormEvent) {
@@ -253,31 +259,55 @@ export default function AdminPage() {
         {/* Knowledge & Rules Tab */}
         {activeTab === "knowledge" && (
           <div className="space-y-6">
-            <form onSubmit={handleSaveKnowledge} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+            {/* Add new knowledge entry */}
+            <form onSubmit={handleAddKnowledge} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
               <h2 className="text-lg font-semibold text-white mb-1">Knowledge Base</h2>
               <p className="text-gray-400 text-sm mb-4">
-                What the AI knows — your expertise, services, content, and background info.
+                Paste any content — each entry is saved separately and can be deleted individually.
               </p>
               <textarea
-                value={knowledge}
-                onChange={(e) => setKnowledge(e.target.value)}
-                rows={10}
+                value={newKnowledge}
+                onChange={(e) => setNewKnowledge(e.target.value)}
+                rows={8}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y text-sm mb-4"
-                placeholder="Enter your knowledge here..."
+                placeholder="Paste knowledge here and click Add Entry..."
               />
               <div className="flex items-center gap-4">
                 <button
                   type="submit"
-                  disabled={savingKnowledge}
+                  disabled={addingKnowledge || !newKnowledge.trim()}
                   className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
                 >
-                  {savingKnowledge ? "Saving..." : "Save Knowledge"}
+                  {addingKnowledge ? "Adding..." : "Add Entry"}
                 </button>
-                {savedKnowledge && (
-                  <span className="text-green-400 text-sm">Knowledge saved!</span>
+                {addedKnowledge && (
+                  <span className="text-green-400 text-sm">Entry added!</span>
                 )}
               </div>
             </form>
+
+            {/* Existing knowledge entries */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+              <h2 className="text-lg font-semibold text-white mb-1">Saved Entries</h2>
+              <p className="text-gray-400 text-sm mb-4">All knowledge entries used by the AI.</p>
+              {!knowledgeEntries || knowledgeEntries.length === 0 ? (
+                <p className="text-gray-500 text-sm">No knowledge entries yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {knowledgeEntries.map((entry) => (
+                    <div key={entry._id} className="flex items-start gap-3 border border-gray-800 rounded-xl p-4">
+                      <p className="flex-1 text-sm text-gray-300 whitespace-pre-wrap line-clamp-4">{entry.content}</p>
+                      <button
+                        onClick={() => removeKnowledgeEntry({ id: entry._id })}
+                        className="shrink-0 text-red-400 hover:text-red-300 text-xs transition-colors mt-0.5"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <form onSubmit={handleSaveRules} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
               <h2 className="text-lg font-semibold text-white mb-1">Response Rules</h2>

@@ -12,15 +12,19 @@ export async function POST(req: NextRequest) {
   const { messages } = await req.json();
   const userQuestion: string = messages[messages.length - 1]?.content ?? "";
 
-  // Fetch knowledge/rules and embed the question in parallel
-  const [knowledge, rules, embeddingResponse] = await Promise.all([
-    convex.query(api.settings.get, { key: "knowledge" }),
+  // Fetch knowledge entries, rules, and embed the question in parallel
+  const [knowledgeEntries, rules, embeddingResponse] = await Promise.all([
+    convex.query(api.knowledgeEntries.list, {}),
     convex.query(api.settings.get, { key: "rules" }),
     openai.embeddings.create({
       model: "text-embedding-3-small",
       input: userQuestion,
     }),
   ]);
+
+  const knowledge = knowledgeEntries.length > 0
+    ? knowledgeEntries.map((e, i) => `[Entry ${i + 1}]\n${e.content}`).join("\n\n")
+    : null;
 
   const questionEmbedding = embeddingResponse.data[0].embedding;
 
