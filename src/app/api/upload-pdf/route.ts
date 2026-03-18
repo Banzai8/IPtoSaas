@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
       progress: 0,
       status: "error",
     });
-    console.error("PDF processing error:", err);
-    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("PDF processing error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
