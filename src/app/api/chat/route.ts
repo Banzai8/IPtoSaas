@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
     convex.query(api.settings.get, { key: "rules" }),
   ]);
 
+  const source: "knowledge_base" | "none" = knowledge ? "knowledge_base" : "none";
+
   const systemPrompt = `You are an AI assistant for an online marketing coaching business.
 
 ${knowledge ? `## Your Knowledge Base\n${knowledge}` : ""}
@@ -41,5 +43,5 @@ Always be helpful, professional, and focused on online marketing topics. Base yo
     return NextResponse.json({ error: "Unexpected response type" }, { status: 500 });
   }
 
-  return NextResponse.json({ content: content.text });
+  return NextResponse.json({ content: content.text, source });
 }

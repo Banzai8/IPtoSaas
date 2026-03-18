@@ -14,8 +14,10 @@ export default function AdminPage() {
   // Knowledge & Rules
   const [knowledge, setKnowledge] = useState("");
   const [rules, setRules] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [savingKnowledge, setSavingKnowledge] = useState(false);
+  const [savedKnowledge, setSavedKnowledge] = useState(false);
+  const [savingRules, setSavingRules] = useState(false);
+  const [savedRules, setSavedRules] = useState(false);
 
   // Access Passwords
   const [newPassword, setNewPassword] = useState("");
@@ -51,16 +53,22 @@ export default function AdminPage() {
     }
   }
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSaveKnowledge(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    await Promise.all([
-      setSetting({ key: "knowledge", value: knowledge }),
-      setSetting({ key: "rules", value: rules }),
-    ]);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSavingKnowledge(true);
+    await setSetting({ key: "knowledge", value: knowledge });
+    setSavingKnowledge(false);
+    setSavedKnowledge(true);
+    setTimeout(() => setSavedKnowledge(false), 3000);
+  }
+
+  async function handleSaveRules(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingRules(true);
+    await setSetting({ key: "rules", value: rules });
+    setSavingRules(false);
+    setSavedRules(true);
+    setTimeout(() => setSavedRules(false), 3000);
   }
 
   async function handleAddPassword(e: React.FormEvent) {
@@ -168,8 +176,8 @@ export default function AdminPage() {
 
         {/* Knowledge & Rules Tab */}
         {activeTab === "knowledge" && (
-          <form onSubmit={handleSave} className="space-y-6">
-            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div className="space-y-6">
+            <form onSubmit={handleSaveKnowledge} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
               <h2 className="text-lg font-semibold text-white mb-1">Knowledge Base</h2>
               <p className="text-gray-400 text-sm mb-4">
                 What the AI knows — your expertise, services, content, and background info.
@@ -178,12 +186,24 @@ export default function AdminPage() {
                 value={knowledge}
                 onChange={(e) => setKnowledge(e.target.value)}
                 rows={10}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y text-sm"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y text-sm mb-4"
                 placeholder="Enter your knowledge here..."
               />
-            </div>
+              <div className="flex items-center gap-4">
+                <button
+                  type="submit"
+                  disabled={savingKnowledge}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
+                >
+                  {savingKnowledge ? "Saving..." : "Save Knowledge"}
+                </button>
+                {savedKnowledge && (
+                  <span className="text-green-400 text-sm">Knowledge saved!</span>
+                )}
+              </div>
+            </form>
 
-            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+            <form onSubmit={handleSaveRules} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
               <h2 className="text-lg font-semibold text-white mb-1">Response Rules</h2>
               <p className="text-gray-400 text-sm mb-4">
                 How the AI should respond — tone, style, boundaries, and instructions.
@@ -192,24 +212,23 @@ export default function AdminPage() {
                 value={rules}
                 onChange={(e) => setRules(e.target.value)}
                 rows={8}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y text-sm"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y text-sm mb-4"
                 placeholder="Enter your rules here..."
               />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                type="submit"
-                disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-8 py-2.5 rounded-lg transition-colors"
-              >
-                {saving ? "Saving..." : "Save Settings"}
-              </button>
-              {saved && (
-                <span className="text-green-400 text-sm">Settings saved successfully!</span>
-              )}
-            </div>
-          </form>
+              <div className="flex items-center gap-4">
+                <button
+                  type="submit"
+                  disabled={savingRules}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
+                >
+                  {savingRules ? "Saving..." : "Save Rules"}
+                </button>
+                {savedRules && (
+                  <span className="text-green-400 text-sm">Rules saved!</span>
+                )}
+              </div>
+            </form>
+          </div>
         )}
 
         {/* Access Passwords Tab */}

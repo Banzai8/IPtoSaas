@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  source?: "knowledge_base" | "pdf" | "none";
 }
 
 export default function ChatPage() {
@@ -59,7 +60,7 @@ export default function ChatPage() {
       const data = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.content },
+        { role: "assistant", content: data.content, source: data.source },
       ]);
     } catch {
       setMessages((prev) => [
@@ -136,7 +137,7 @@ export default function ChatPage() {
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
           >
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
@@ -147,6 +148,13 @@ export default function ChatPage() {
             >
               {msg.content}
             </div>
+            {msg.role === "assistant" && msg.source && msg.source !== "none" && (
+              <span className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                {msg.source === "knowledge_base" && "Answered from knowledge base"}
+                {msg.source === "pdf" && "Answered from PDF"}
+              </span>
+            )}
           </div>
         ))}
         {loading && (
