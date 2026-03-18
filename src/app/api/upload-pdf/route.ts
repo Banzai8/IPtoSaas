@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import OpenAI from "openai";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export const maxDuration = 60;
 
@@ -50,14 +51,10 @@ export async function POST(req: NextRequest) {
 
   try {
     // Step 2: Extract text
-    const buffer = Buffer.from(await file.arrayBuffer());
-    // Require inside handler so it runs at Node.js runtime, not webpack bundle time
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParseModule = require("pdf-parse");
-    const pdfParseFn: (buf: Buffer) => Promise<{ text: string }> =
-      typeof pdfParseModule === "function" ? pdfParseModule : pdfParseModule.default;
-    const parsed = await pdfParseFn(buffer);
-    const rawText = parsed.text.trim();
+    const buffer = await file.arrayBuffer();
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text: pages } = await extractText(pdf, { mergePages: true });
+    const rawText = (Array.isArray(pages) ? pages.join("\n") : String(pages)).trim();
 
     if (!rawText) {
       await convex.mutation(api.pdfDocuments.updateProgress, {
