@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"knowledge" | "passwords">("knowledge");
+  const [activeTab, setActiveTab] = useState<"knowledge" | "passwords" | "conversations">("knowledge");
 
   // Knowledge & Rules
   const [knowledge, setKnowledge] = useState("");
@@ -28,6 +28,7 @@ export default function AdminPage() {
   const settings = useQuery(api.settings.getAll);
   const setSetting = useMutation(api.settings.set);
   const accessPasswords = useQuery(api.accessPasswords.list);
+  const conversations = useQuery(api.conversations.list);
   const addPassword = useMutation(api.accessPasswords.add);
   const removePassword = useMutation(api.accessPasswords.remove);
 
@@ -171,6 +172,16 @@ export default function AdminPage() {
             }`}
           >
             Access Passwords
+          </button>
+          <button
+            onClick={() => setActiveTab("conversations")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "conversations"
+                ? "bg-gray-800 text-white border border-gray-700"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Conversations
           </button>
         </div>
 
@@ -325,6 +336,51 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Conversations Tab */}
+        {activeTab === "conversations" && (
+          <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+            <h2 className="text-lg font-semibold text-white mb-1">Customer Conversations</h2>
+            <p className="text-gray-400 text-sm mb-4">
+              All questions asked by customers, most recent first.
+            </p>
+
+            {!conversations || conversations.length === 0 ? (
+              <p className="text-gray-500 text-sm">No conversations yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {conversations.map((conv) => (
+                  <div key={conv._id} className="border border-gray-800 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        {new Date(conv.askedAt).toLocaleString()}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        conv.source === "knowledge_base"
+                          ? "bg-green-900/50 text-green-400"
+                          : conv.source === "pdf"
+                          ? "bg-blue-900/50 text-blue-400"
+                          : "bg-gray-800 text-gray-400"
+                      }`}>
+                        {conv.source === "knowledge_base" && "Knowledge Base"}
+                        {conv.source === "pdf" && "PDF"}
+                        {conv.source === "none" && "No source"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 mb-0.5">Question</p>
+                      <p className="text-sm text-white">{conv.question}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 mb-0.5">Answer</p>
+                      <p className="text-sm text-gray-300 line-clamp-3">{conv.answer}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

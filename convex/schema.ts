@@ -12,4 +12,11 @@ export default defineSchema({
     expiryDate: v.string(), // ISO date string "YYYY-MM-DD"
     createdAt: v.number(),
   }),
+
+  conversations: defineTable({
+    question: v.string(),
+    answer: v.string(),
+    source: v.string(), // "knowledge_base" | "pdf" | "none"
+    askedAt: v.number(),
+  }),
 });

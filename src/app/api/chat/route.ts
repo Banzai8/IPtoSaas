@@ -43,5 +43,12 @@ Always be helpful, professional, and focused on online marketing topics. Base yo
     return NextResponse.json({ error: "Unexpected response type" }, { status: 500 });
   }
 
+  const userQuestion = messages[messages.length - 1]?.content ?? "";
+  await convex.mutation(api.conversations.save, {
+    question: userQuestion,
+    answer: content.text,
+    source,
+  });
+
   return NextResponse.json({ content: content.text, source });
 }
