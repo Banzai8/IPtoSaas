@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"knowledge" | "passwords" | "conversations">("knowledge");
+  const [activeTab, setActiveTab] = useState<"knowledge" | "passwords" | "conversations" | "pdfs">("knowledge");
 
   // Knowledge & Rules
   const [knowledge, setKnowledge] = useState("");
@@ -25,12 +25,22 @@ export default function AdminPage() {
   const [addingPassword, setAddingPassword] = useState(false);
   const [addError, setAddError] = useState("");
 
+  // PDFs
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "processing" | "done" | "error">("idle");
+  const [uploadError, setUploadError] = useState("");
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+
   const settings = useQuery(api.settings.getAll);
   const setSetting = useMutation(api.settings.set);
   const accessPasswords = useQuery(api.accessPasswords.list);
   const conversations = useQuery(api.conversations.list);
   const addPassword = useMutation(api.accessPasswords.add);
   const removePassword = useMutation(api.accessPasswords.remove);
+  const pdfDocuments = useQuery(api.pdfDocuments.list);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const uploadingDoc = useQuery(api.pdfDocuments.getById, uploadingDocId ? { id: uploadingDocId as any } : "skip");
+  const removePdfDocument = useMutation(api.pdfDocuments.remove);
+  const deleteChunksByDocument = useMutation(api.pdfChunks.deleteByDocument);
 
   useEffect(() => {
     if (settings) {
@@ -38,6 +48,21 @@ export default function AdminPage() {
       setRules(settings.rules ?? "");
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (!uploadingDoc) return;
+    if (uploadingDoc.status === "ready") {
+      setUploadStatus("done");
+      setTimeout(() => {
+        setUploadStatus("idle");
+        setUploadingDocId(null);
+      }, 3000);
+    }
+    if (uploadingDoc.status === "error") {
+      setUploadStatus("error");
+      setUploadError("Processing failed. Please try again.");
+    }
+  }, [uploadingDoc]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +113,36 @@ export default function AdminPage() {
     setNewPassword("");
     setNewExpiry("");
     setAddingPassword(false);
+  }
+
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadStatus("uploading");
+    setUploadError("");
+    setUploadingDocId(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload-pdf", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Upload failed");
+      }
+      const data = await res.json();
+      setUploadingDocId(data.docId);
+      setUploadStatus("processing");
+      e.target.value = "";
+    } catch (err) {
+      setUploadStatus("error");
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function handleDeletePdf(docId: any) {
+    await deleteChunksByDocument({ documentId: docId });
+    await removePdfDocument({ id: docId });
   }
 
   function formatDate(isoDate: string) {
@@ -182,6 +237,16 @@ export default function AdminPage() {
             }`}
           >
             Conversations
+          </button>
+          <button
+            onClick={() => setActiveTab("pdfs")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "pdfs"
+                ? "bg-gray-800 text-white border border-gray-700"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            PDFs
           </button>
         </div>
 
@@ -362,10 +427,13 @@ export default function AdminPage() {
                           ? "bg-green-900/50 text-green-400"
                           : conv.source === "pdf"
                           ? "bg-blue-900/50 text-blue-400"
+                          : conv.source === "both"
+                          ? "bg-purple-900/50 text-purple-400"
                           : "bg-gray-800 text-gray-400"
                       }`}>
                         {conv.source === "knowledge_base" && "Knowledge Base"}
                         {conv.source === "pdf" && "PDF"}
+                        {conv.source === "both" && "PDF + Knowledge Base"}
                         {conv.source === "none" && "No source"}
                       </span>
                     </div>
@@ -381,6 +449,123 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* PDFs Tab */}
+        {activeTab === "pdfs" && (
+          <div className="space-y-6">
+            {/* Upload */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+              <h2 className="text-lg font-semibold text-white mb-1">Upload PDF</h2>
+              <p className="text-gray-400 text-sm mb-4">
+                Upload a PDF to extract and index its content for the AI to use.
+              </p>
+
+              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                uploadStatus === "idle" || uploadStatus === "done"
+                  ? "border-gray-700 hover:border-gray-500"
+                  : "border-gray-800 cursor-not-allowed"
+              }`}>
+                <div className="text-center">
+                  <p className="text-sm text-gray-400">
+                    {uploadStatus === "idle" && "Click to select a PDF file"}
+                    {uploadStatus === "uploading" && "Uploading..."}
+                    {uploadStatus === "processing" && "Processing..."}
+                    {uploadStatus === "done" && "Done!"}
+                    {uploadStatus === "error" && "Upload failed — try again"}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">PDF files only</p>
+                </div>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  disabled={uploadStatus === "uploading" || uploadStatus === "processing"}
+                  onChange={handlePdfUpload}
+                />
+              </label>
+
+              {/* Progress bar */}
+              {(uploadStatus === "uploading" || uploadStatus === "processing") && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-400">
+                      {uploadStatus === "uploading"
+                        ? "Uploading file..."
+                        : `Indexing chunks... ${uploadingDoc?.progress ?? 0}%`}
+                    </span>
+                    <span className="text-xs text-gray-500">{uploadingDoc?.progress ?? 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${uploadingDoc?.progress ?? 0}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {uploadStatus === "done" && (
+                <p className="mt-3 text-green-400 text-sm">PDF indexed successfully!</p>
+              )}
+              {uploadStatus === "error" && uploadError && (
+                <p className="mt-3 text-red-400 text-sm">{uploadError}</p>
+              )}
+            </div>
+
+            {/* PDF List */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+              <h2 className="text-lg font-semibold text-white mb-1">Uploaded PDFs</h2>
+              <p className="text-gray-400 text-sm mb-4">Manage indexed PDF documents.</p>
+
+              {!pdfDocuments || pdfDocuments.length === 0 ? (
+                <p className="text-gray-500 text-sm">No PDFs uploaded yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-800">
+                        <th className="text-left text-gray-400 font-medium pb-3">Filename</th>
+                        <th className="text-left text-gray-400 font-medium pb-3">Uploaded</th>
+                        <th className="text-left text-gray-400 font-medium pb-3">Chunks</th>
+                        <th className="text-left text-gray-400 font-medium pb-3">Status</th>
+                        <th className="text-left text-gray-400 font-medium pb-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {pdfDocuments.map((doc) => (
+                        <tr key={doc._id}>
+                          <td className="py-3 text-white font-mono text-xs max-w-[200px] truncate">{doc.filename}</td>
+                          <td className="py-3 text-gray-300 text-xs">{new Date(doc.uploadedAt).toLocaleDateString()}</td>
+                          <td className="py-3 text-gray-300 text-xs">{doc.totalChunks}</td>
+                          <td className="py-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              doc.status === "ready"
+                                ? "bg-green-900/50 text-green-400"
+                                : doc.status === "processing"
+                                ? "bg-yellow-900/50 text-yellow-400"
+                                : "bg-red-900/50 text-red-400"
+                            }`}>
+                              {doc.status === "ready" ? "Ready" : doc.status === "processing" ? "Processing" : "Error"}
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            <button
+                              onClick={() => handleDeletePdf(doc._id)}
+                              disabled={doc.status === "processing"}
+                              className="text-red-400 hover:text-red-300 text-xs transition-colors disabled:opacity-40"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 interface Message {
   role: "user" | "assistant";
   content: string;
-  source?: "knowledge_base" | "pdf" | "none";
+  source?: "knowledge_base" | "pdf" | "both" | "none";
 }
 
 export default function ChatPage() {
@@ -153,6 +153,7 @@ export default function ChatPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
                 {msg.source === "knowledge_base" && "Answered from knowledge base"}
                 {msg.source === "pdf" && "Answered from PDF"}
+                {msg.source === "both" && "Answered from PDF + knowledge base"}
               </span>
             )}
           </div>

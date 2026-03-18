@@ -16,7 +16,28 @@ export default defineSchema({
   conversations: defineTable({
     question: v.string(),
     answer: v.string(),
-    source: v.string(), // "knowledge_base" | "pdf" | "none"
+    source: v.string(), // "knowledge_base" | "pdf" | "both" | "none"
     askedAt: v.number(),
   }),
+
+  pdfDocuments: defineTable({
+    filename: v.string(),
+    status: v.string(),    // "processing" | "ready" | "error"
+    progress: v.number(),  // 0–100
+    totalChunks: v.number(),
+    uploadedAt: v.number(),
+  }),
+
+  pdfChunks: defineTable({
+    documentId: v.id("pdfDocuments"),
+    text: v.string(),
+    chunkIndex: v.number(),
+    embedding: v.array(v.float64()),
+  })
+    .index("by_document", ["documentId"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536, // text-embedding-3-small
+      filterFields: [],
+    }),
 });
