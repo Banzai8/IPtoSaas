@@ -31,16 +31,18 @@ export const searchSimilar = action({
     embedding: v.array(v.float64()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Array<{ _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } | null>> => {
     const limit = args.limit ?? 5;
     const results = await ctx.vectorSearch("pdfChunks", "by_embedding", {
       vector: args.embedding,
       limit,
     });
-    const chunks = await Promise.all(
-      results.map((r) => ctx.runQuery(api.pdfChunks.getById, { id: r._id }))
+    const chunks: Array<{ _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } | null> = await Promise.all(
+      results.map((r): Promise<{ _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } | null> =>
+        ctx.runQuery(api.pdfChunks.getById, { id: r._id })
+      )
     );
-    return chunks.filter(Boolean);
+    return chunks.filter((c): c is { _id: string; documentId: string; text: string; chunkIndex: number; embedding: number[]; _creationTime: number } => c !== null);
   },
 });
 
