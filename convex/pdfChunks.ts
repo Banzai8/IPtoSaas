@@ -36,7 +36,7 @@ export const searchSimilar = action({
   },
   handler: async (ctx, args): Promise<ChunkDoc[]> => {
     const limit = args.limit ?? 5;
-    const minScore = args.minScore ?? 0.6; // only return genuinely relevant chunks
+    const minScore = args.minScore ?? 0.5; // only return genuinely relevant chunks
     const results = await ctx.vectorSearch("pdfChunks", "by_embedding", {
       vector: args.embedding,
       limit,
