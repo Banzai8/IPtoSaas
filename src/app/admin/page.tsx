@@ -364,7 +364,7 @@ export default function AdminPage() {
                       type="date"
                       value={newExpiry}
                       onChange={(e) => setNewExpiry(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
                     />
                   </div>
                 </div>
